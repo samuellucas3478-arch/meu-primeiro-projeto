@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Aurora IA</title>
+
+<style>
+body{
+    background:#0f172a;
+    color:white;
+    font-family:Arial;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    margin:0;
+}
+
+#chat{
+    flex:1;
+    overflow-y:auto;
+    padding:10px;
+}
+
+.msg{
+    padding:10px;
+    margin:8px;
+    border-radius:10px;
+    max-width:80%;
+}
+
+.user{
+    background:#2563eb;
+    align-self:flex-end;
+}
+
+.ia{
+    background:#1e293b;
+}
+
+#barra{
+    display:flex;
+}
+
+input{
+    flex:1;
+    padding:12px;
+    border:none;
+}
+
+button{
+    width:100px;
+    background:#22c55e;
+    border:none;
+    color:white;
+}
+</style>
+</head>
+
+<body>
+
+<div id="chat"></div>
+
+<div id="barra">
+<input id="pergunta" placeholder="Fale com Aurora...">
+<button onclick="enviar()">Enviar</button>
+</div>
+
+<script>
+
+// ===== PERSONALIDADE =====
+const personalidade = {
+    nome:"Aurora",
+    criador:"Samuel",
+    estilo:"amigável, inteligente e curiosa"
+};
+
+// ===== MEMÓRIA =====
+let memoria = JSON.parse(localStorage.getItem("chat")) || [];
+
+function mostrar(msg,tipo){
+    let chat=document.getElementById("chat");
+
+    let div=document.createElement("div");
+    div.className="msg "+tipo;
+    div.innerText=msg;
+
+    chat.appendChild(div);
+    chat.scrollTop=chat.scrollHeight;
+}
+
+memoria.forEach(m=>mostrar(m.texto,m.tipo));
+
+function salvar(texto,tipo){
+    memoria.push({texto,tipo});
+    localStorage.setItem("chat",JSON.stringify(memoria));
+}
+
+// ===== LIMPAR TEXTO =====
+function limpar(texto){
+    return texto.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^\w\s]/gi,"")
+    .trim();
+}
+
+// ===== RACIOCÍNIO LOCAL =====
+function pensar(pergunta){
+
+    if(pergunta.includes("oi") || pergunta.includes("ola"))
+        return "Olá! 😄 Como posso te ajudar hoje?";
+
+    if(pergunta.includes("tudo bem"))
+        return "Estou funcionando perfeitamente! E você?";
+
+    if(pergunta.includes("quem e voce"))
+        return "Eu sou Aurora, uma IA criada por Samuel.";
+
+    if(pergunta.includes("obrigado"))
+        return "De nada! Sempre que precisar estou aqui.";
+
+    return null;
+}
+
+// ===== PESQUISA INTERNET =====
+async function pesquisar(pergunta){
+
+    try{
+        let url="https://api.duckduckgo.com/?q="
+        +encodeURIComponent(pergunta)
+        +"&format=json&no_html=1";
+
+        let r=await fetch(url);
+        let dados=await r.json();
+
+        if(dados.AbstractText)
+            return dados.AbstractText;
+
+        return "Ainda não encontrei uma resposta confiável.";
+    }
+    catch{
+        return "Não consegui acessar a internet agora.";
+    }
+}
+
+// ===== CÉREBRO =====
+async function responder(pergunta){
+
+    pergunta=limpar(pergunta);
+
+    // 1️⃣ tenta conversar
+    let respostaLocal=pensar(pergunta);
+    if(respostaLocal) return respostaLocal;
+
+    // 2️⃣ pesquisa online
+    return await pesquisar(pergunta);
+}
+
+// ===== CHAT =====
+function enviar(){
+
+    let input=document.getElementById("pergunta");
+    let texto=input.value;
+
+    if(!texto) return;
+
+    mostrar(texto,"user");
+    salvar(texto,"user");
+
+    mostrar("Pensando...","ia");
+
+    responder(texto).then(resp=>{
+
+        document.querySelector("#chat .ia:last-child").remove();
+
+        mostrar(resp,"ia");
+        salvar(resp,"ia");
+
+    });
+
+    input.value="";
+}
+
+</script>
+
+</body>
+</html>
